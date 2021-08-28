@@ -1,3 +1,4 @@
+from sys import path
 import requests
 import os
 import tweepy as tw
@@ -5,11 +6,15 @@ import pandas as pd
 import json
 import time
 import datetime
+from pathlib import Path
 
-consumer_key= 'yourkeyhere'
-consumer_secret= 'yourkeyhere'
-access_token= 'yourkeyhere'
-access_token_secret= 'yourkeyhere'
+with open(Path("../keys.txt")) as s:
+    s = s.read().splitlines()
+consumer_key= s[0]
+consumer_secret= s[1]
+access_token= s[2]
+access_token_secret= s[3]
+
 
 auth = tw.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
@@ -77,7 +82,7 @@ def show_history(content):
 #nicely format transactions in strin
 def pretty_transaction(txn):
     txn = txn.split(":")
-    t = (datetime.utcfromtimestamp(int(txn[3])).strftime('%Y-%m-%d %H:%M:%S'))
+    t = str(datetime.datetime.fromtimestamp(int(txn[3])))
     s = t + ": " + txn[0] + " sent " + txn[2] + " to " + txn[1]
     if bool(txn[3]) == False:
         s = s + " - Failed due to recipient registration timeout"
