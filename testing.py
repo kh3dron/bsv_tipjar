@@ -4,6 +4,7 @@ import tweepy as tw
 import pandas as pd
 import json
 import time
+import datetime
 
 consumer_key= 'yourkeyhere'
 consumer_secret= 'yourkeyhere'
@@ -58,13 +59,29 @@ def parse_command(content):
     id = (content._json['id'])
     tweet = content._json["text"].split(" ")
     verb = tweet[1]
-    print(tweet)
 
     if verb == "send":
         create_transaction(content)
     if verb == "balance":
-        print("rendering balance")
         show_balance(content)
+    if verb == "history":
+        show_history(content)
+    return
+
+def show_history(content):
+    h = get_user_history(content._json["user"]["screen_name"])
+    pretties = [pretty_transaction(e) for e in h]
+    api.update_status(status=(pretties), in_reply_to_status_id = content._json["id"])
+    return
+
+#nicely format transactions in strin
+def pretty_transaction(txn):
+    txn = txn.split(":")
+    t = (datetime.utcfromtimestamp(int(txn[3])).strftime('%Y-%m-%d %H:%M:%S'))
+    s = t + ": " + txn[0] + " sent " + txn[2] + " to " + txn[1]
+    if bool(txn[3]) == False:
+        s = s + " - Failed due to recipient registration timeout"
+    return s
 
 #replies to "balance" query
 def show_balance(content):
@@ -76,7 +93,6 @@ def show_balance(content):
         api.update_status(status=("Balance of " + user + " is " + str(bal)), in_reply_to_status_id = id)
     return
 
-
 def user_is_registered(user):
     return (get_user_wallet(user) != -1)
 
@@ -85,7 +101,6 @@ def get_user_wallet(user):
         f = f.read().splitlines()
     for l in f:
         l = l.split(":")
-        print(l)
         if l[0] == user:
             return int(l[1])
     return -1
@@ -104,7 +119,7 @@ def prune_pendings():
     return
 
 #get the last <count> transactions to or from a user
-def get_user_history(user, count):
+def get_user_history(user, count=3):
     hists = []
     with open("history.txt") as f:
         f = f.read().splitlines()
