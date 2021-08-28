@@ -121,6 +121,31 @@ def get_wallet_balance(wal):
 
 #transactions to senders not yet registered are denoted as failed after <20 days>
 def prune_pendings():
+    goods = []
+    fails = []
+    cur = time.time()
+    with open ("pendings.txt") as f:
+        f = f.read().splitlines()
+    for e in f:
+        e_split = e.split(":")
+        age = cur - int(e_split[3])
+        if age > (60 * 60 * 24 * 20):
+            fails.append(e)
+        else:
+            goods.append(e)
+
+    #write mode clears the file to start - intended
+    with open ("pendings.txt", "w") as p:
+        for e in goods:
+            p.write(e+"\n")
+    p.close()
+
+    #will want to insert these in in order in the future
+    with open ("history.txt", "a") as h:
+        for e in fails:
+            h.write(e + ":False")
+    h.close()
+
     return
 
 #get the last <count> transactions to or from a user
