@@ -42,22 +42,15 @@ myStreamListener = MyStreamListener()
 myStream = tw.Stream(auth = api.auth, listener=myStreamListener)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 myStream.filter(track=['tipjartest'], is_async=True) #invocation phrase
 
-#expected format: (@tipjartest send 10 to mitch)
-def create_transaction(content):
-    sender = (content._json['user']['screen_name'])
-    id = (content._json['id'])
-    tweet = content._json["text"].split(" ")
+def get_wallet_balance(wal):
+    with open("balances.txt", "r") as f:
+        f = f.read().splitlines()
+    for l in f:
+        l = l.split(":")
+        if int(l[0]) == wal:
+            return int(l[1])
+    return -1
     
-    #expected format: (@tipjartest send 10 to mitch)
-    val = int(tweet[2])
-    recipient = tweet[4]
-    transact = ":".join([sender, recipient, str(val), str(time.time())])
-    f = open("pendings.txt", "a")
-    f.write(transact + "\n")
-    f.close()
-    api.update_status(status=(transact), in_reply_to_status_id = id) 
-    return 
-
 #Handles all bot mentions - guides to proper methods
 def parse_command(content):
     sender = (content._json['user']['screen_name'])
@@ -110,15 +103,6 @@ def get_user_wallet(user):
             return int(l[1])
     return -1
 
-def get_wallet_balance(wal):
-    with open("balances.txt", "r") as f:
-        f = f.read().splitlines()
-    for l in f:
-        l = l.split(":")
-        if int(l[0]) == wal:
-            return int(l[1])
-    return -1
-
 #transactions to senders not yet registered are denoted as failed after <20 days>
 def prune_pendings():
     goods = []
@@ -160,3 +144,29 @@ def get_user_history(user, count=3):
         if len(hists) >= count:
             break
     return hists
+
+def debit_wallet(debit, wallet):
+    return
+
+#expected format: (@tipjartest send 10 to mitch)
+def create_transaction(content):
+    sender = (content._json['user']['screen_name'])
+    id = (content._json['id'])
+    tweet = content._json["text"].split(" ")
+    
+    #expected format: (@tipjartest send 10 to mitch)
+    val = int(tweet[2])
+    recipient = tweet[4]
+    
+    if (get_wallet_balance(get_user_wallet(sender)) < val):
+        api.update_status("Error code BR0K3-A55: insufficient funds to initiate transaction", in_reply_to_status_id = id)
+    elif not (user_is_registered(recipient)):
+        transact = ":".join([sender, recipient, str(val), str(time.time())])
+        f = open("pendings.txt", "a")
+        f.write(transact + "\n")
+        f.close()
+        transact = transact + " [Pending recipient registration"
+        api.update_status(status=(transact), in_reply_to_status_id = id)
+    else:
+      debit_wallet()  
+    return 
