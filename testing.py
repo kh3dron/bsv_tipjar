@@ -145,7 +145,29 @@ def get_user_history(user, count=3):
             break
     return hists
 
-def debit_wallet(debit, wallet):
+def debit_wallet(wal, amount):
+    with open("balances.txt") as w:
+        lines = w.read().splitlines()
+    for c, each in enumerate(lines):
+        e = each.split(":")
+        print(e)
+        if int(e[0]) == wal:
+            b = int(e[1]) + amount
+            e[1] = str(b)
+            print("Mod to " + e[1])
+        lines[c] = ":".join(e)
+    w.close()
+    with open ("balances.txt", "w") as w:
+        for e in lines:
+            w.write(e + "\n")
+    w.close()
+    return
+
+def transaction(sender, recipient, amount):
+    from_w = get_user_wallet(sender)
+    to_w = get_user_wallet(recipient)
+    debit_wallet(from_w, -amount)
+    debit_wallet(to_w, amount)
     return
 
 #expected format: (@tipjartest send 10 to mitch)
@@ -159,14 +181,21 @@ def create_transaction(content):
     recipient = tweet[4]
     
     if (get_wallet_balance(get_user_wallet(sender)) < val):
-        api.update_status("Error code BR0K3-A55: insufficient funds to initiate transaction", in_reply_to_status_id = id)
+        print(get_user_wallet(sender))
+        print(get_wallet_balance(get_user_wallet(sender)))
+        api.update_status("ERROR: Insufficient funds to initiate transaction", in_reply_to_status_id = id)
+    elif (val < 0):
+        api.update_status("ERROR: No negative value transactions", in_reply_to_status_id = id)
     elif not (user_is_registered(recipient)):
         transact = ":".join([sender, recipient, str(val), str(time.time())])
         f = open("pendings.txt", "a")
         f.write(transact + "\n")
         f.close()
-        transact = transact + " [Pending recipient registration"
+        transact = transact + " [Pending recipient registration]"
         api.update_status(status=(transact), in_reply_to_status_id = id)
     else:
-      debit_wallet()  
+        print(val, type(val))
+        transaction(sender, recipient, val)
+        msg = "Sent " + str(val) + " to " + recipient
+        api.update_status(status = msg, in_reply_to_status_id = id)
     return 
