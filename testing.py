@@ -68,8 +68,10 @@ def parse_command(content):
 
 def show_history(content):
     h = get_user_history(content._json["user"]["screen_name"])
-    pretties = [pretty_transaction(e) for e in h]
-    api.update_status(status=(pretties), in_reply_to_status_id = content._json["id"])
+    p1 = [pretty_transaction(e) for e in h]
+    p2 = "\n".join(p1)
+    print("here")
+    api.update_status(status=(p2), in_reply_to_status_id = content._json["id"])
     return
 
 #nicely format transactions in strin
@@ -150,11 +152,9 @@ def debit_wallet(wal, amount):
         lines = w.read().splitlines()
     for c, each in enumerate(lines):
         e = each.split(":")
-        print(e)
         if int(e[0]) == wal:
             b = int(e[1]) + amount
             e[1] = str(b)
-            print("Mod to " + e[1])
         lines[c] = ":".join(e)
     w.close()
     with open ("balances.txt", "w") as w:
@@ -168,6 +168,10 @@ def transaction(sender, recipient, amount):
     to_w = get_user_wallet(recipient)
     debit_wallet(from_w, -amount)
     debit_wallet(to_w, amount)
+    txn = [sender, recipient, str(amount), str(int(time.time())), "True"]
+    txn = ":".join(txn)
+    with open("history.txt", "a") as h:
+        h.write(txn + "\n")
     return
 
 #expected format: (@tipjartest send 10 to mitch)
@@ -181,20 +185,17 @@ def create_transaction(content):
     recipient = tweet[4]
     
     if (get_wallet_balance(get_user_wallet(sender)) < val):
-        print(get_user_wallet(sender))
-        print(get_wallet_balance(get_user_wallet(sender)))
         api.update_status("ERROR: Insufficient funds to initiate transaction", in_reply_to_status_id = id)
     elif (val < 0):
         api.update_status("ERROR: No negative value transactions", in_reply_to_status_id = id)
     elif not (user_is_registered(recipient)):
-        transact = ":".join([sender, recipient, str(val), str(time.time())])
+        transact = ":".join([sender, recipient, str(val), str(int(time.time()))])
         f = open("pendings.txt", "a")
         f.write(transact + "\n")
         f.close()
-        transact = transact + " [Pending recipient registration]"
+        transact = transact + "Sending" + str(val) + " to " + recipient + " [Pending recipient registration]"
         api.update_status(status=(transact), in_reply_to_status_id = id)
     else:
-        print(val, type(val))
         transaction(sender, recipient, val)
         msg = "Sent " + str(val) + " to " + recipient
         api.update_status(status = msg, in_reply_to_status_id = id)
